@@ -1,5 +1,5 @@
 // Worker URL is inserted here once after deploying the separate Cloudflare Worker.
-const AI_API_URL = "fragrant-flower-2176.vp5vy7g7db.workers.dev";
+const AI_API_URL = "const AI_API_URL = "https://fragrant-flower-2176.vp5vy7g7db.workers.dev";
 const body=document.querySelector('#chatBody'),form=document.querySelector('#chatForm'),input=document.querySelector('#chatInput');
 function addBubble(text,who){const d=document.createElement('div');d.className='bubble '+who;d.textContent=text;body.appendChild(d);body.scrollTop=body.scrollHeight;return d}
 form.addEventListener('submit',async e=>{e.preventDefault();const q=input.value.trim();if(!q)return;addBubble(q,'user');input.value='';const pending=addBubble('Ойланып жатырмын…','bot');if(AI_API_URL.includes('PASTE_')){pending.textContent='AI Worker әлі жарияланбаған. README ішіндегі қысқа қадаммен Worker-ді жариялаған соң, оның URL-ін кодтағы бір тұрақты жолға енгізу керек.';return}try{const res=await fetch(AI_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});const data=await res.json();if(!res.ok)throw new Error(data.error||'Сұрау орындалмады');pending.textContent=data.answer||'Жауап алынбады.'}catch(err){pending.textContent='Қазір AI жауабын алу мүмкін болмады. Интернетті тексеріп, біраздан соң қайталап көр.';console.error(err)}});
