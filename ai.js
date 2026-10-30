@@ -1,5 +1,70 @@
-// Worker URL is inserted here once after deploying the separate Cloudflare Worker.
-const AI_API_URL = "const AI_API_URL = "https://fragrant-flower-2176.vp5vy7g7db.workers.dev";
-const body=document.querySelector('#chatBody'),form=document.querySelector('#chatForm'),input=document.querySelector('#chatInput');
-function addBubble(text,who){const d=document.createElement('div');d.className='bubble '+who;d.textContent=text;body.appendChild(d);body.scrollTop=body.scrollHeight;return d}
-form.addEventListener('submit',async e=>{e.preventDefault();const q=input.value.trim();if(!q)return;addBubble(q,'user');input.value='';const pending=addBubble('Ойланып жатырмын…','bot');if(AI_API_URL.includes('PASTE_')){pending.textContent='AI Worker әлі жарияланбаған. README ішіндегі қысқа қадаммен Worker-ді жариялаған соң, оның URL-ін кодтағы бір тұрақты жолға енгізу керек.';return}try{const res=await fetch(AI_API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});const data=await res.json();if(!res.ok)throw new Error(data.error||'Сұрау орындалмады');pending.textContent=data.answer||'Жауап алынбады.'}catch(err){pending.textContent='Қазір AI жауабын алу мүмкін болмады. Интернетті тексеріп, біраздан соң қайталап көр.';console.error(err)}});
+(() => {
+  const AI_API_URL =
+    "https://fragrant-flower-2176.vp5vy7g7db.workers.dev";
+
+  const form = document.querySelector("#chatForm");
+  const input = document.querySelector("#chatInput");
+  const chat = document.querySelector("#chatBody");
+
+  if (!form || !input || !chat) return;
+
+  function addMessage(text, role) {
+    const message = document.createElement("div");
+    message.className = `bubble ${role}`;
+    message.textContent = text;
+    chat.appendChild(message);
+    chat.scrollTop = chat.scrollHeight;
+    return message;
+  }
+
+  let busy = false;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const question = input.value.trim();
+    if (!question || busy) return;
+
+    busy = true;
+    const button = form.querySelector("button");
+    if (button) button.disabled = true;
+
+    addMessage(question, "user");
+    input.value = "";
+
+    const answer = addMessage("Жауап дайындалып жатыр…", "bot");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const response = await fetch(AI_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ question }),
+        signal: controller.signal,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || `Сервер қатесі: ${response.status}`
+        );
+      }
+
+      answer.textContent = data.answer || "Бос жауап келді.";
+    } catch (error) {
+      answer.textContent =
+        error.name === "AbortError"
+          ? "Жауап күту уақыты аяқталды. Қайталап көр."
+          : `Қате: ${error.message}`;
+    } finally {
+      clearTimeout(timer);
+      busy = false;
+      if (button) button.disabled = false;
+      chat.scrollTop = chat.scrollHeight;
+    }
+  });
+})();
